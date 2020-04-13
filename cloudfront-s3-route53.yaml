@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  MyDomainName:
+    Type: String
+    Description: Root Domain name of your website (example.com) | without WWW
+    Default: example.com
+  Rt53HostedZoneID:
+    Type: String
+    Description: Hosted Zone ID - You can find it in the Hosted Zone Details section in R53
+    Default: EXAMPLEZYT
+  S3forLogs:
+    Type: String
+    Description: >-
+      EXISTING S3 bucket name for CloudfrontDistribution logs !DOESN'T CREATE A
+      NEW S3
+    Default: mylogs
+  PriceClass:
+    Type: String
+    Description: The CloudFront distribution price class
+    Default: PriceClass_100
+    AllowedValues:
+      - PriceClass_100
+      - PriceClass_200
+      - PriceClass_All
+Resources:
+  Cert:
+    Type: 'AWS::CertificateManager::Certificate'
+    Properties:
+      DomainName: !Ref MyDomainName
+      SubjectAlternativeNames:
+        - !Join 
+          - ''
+          - - '*.'
+            - !Ref MyDomainName
+      DomainValidationOptions:
+        - DomainName: !Ref MyDomainName
+          ValidationDomain: !Ref MyDomainName
+      ValidationMethod: DNS
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 66284f51-abeb-4267-a930-fc99bcfc2101
+        
+  #CLOUDFRONT DISTRIBUTION
+  myDistribution:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !Join 
+              - ''
+              - - !Ref MyDomainName
+                - .s3.amazonaws.com
+            Id: !Join 
+              - ''
+              - - S3-
+                - !Ref MyDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        Enabled: 'true'
+        Comment: Some comment
+        DefaultRootObject: index.html
+        Logging:
+          IncludeCookies: 'false'
+          Bucket: !Join 
+            - ''
+            - - !Ref S3forLogs
+              - .s3.amazonaws.com
+          Prefix: !Ref MyDomainName
+        Aliases:
+          - !Sub
+            - www.${Domain}
+            - { Domain: !Ref MyDomainName }
+          - !Ref MyDomainName
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+          TargetOriginId: !Join 
+            - ''
+            - - S3-
+              - !Ref MyDomainName
+          ForwardedValues:
+            QueryString: 'false'
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: !Ref PriceClass
+        ViewerCertificate:
+          SslSupportMethod: sni-only
+          AcmCertificateArn: !Ref Cert
+  # ROUTE53
+  myDNS:
+    Type: 'AWS::Route53::RecordSetGroup'
+    Properties:
+      HostedZoneId: !Ref Rt53HostedZoneID
+      RecordSets:
+        - Name: !Ref MyDomainName
+          Type: A
+          AliasTarget:
+            HostedZoneId: Z2FDTNDATAQYW2
+            DNSName:
+              'Fn::GetAtt':
+                - myDistribution
+                - DomainName
+        - Name: !Sub
+          - www.${Domain}
+          - Domain: !Ref MyDomainName
+          Type: A
+          AliasTarget:
+            HostedZoneId: Z2FDTNDATAQYW2
+            DNSName:
+              'Fn::GetAtt':
+                - myDistribution
+                - DomainName
+Outputs:
+  AcmCertARN:
+    Description: ACM certificate ARN
+    Value:
+      Ref: Cert
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}-CERT'
+  CfntDistributionURL:
+    Description: URL for CloudFront Distribuitions
+    Value:
+      Fn::GetAtt:
+        - myDistribution
+        - DomainName

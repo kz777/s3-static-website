@@ -1,27 +1,52 @@
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   RootDomainName:
-    Description: Domain name for your website (example.com)
+    Description: Root Domain name for your website (example.com)
     Type: String
 Resources:
+  # S3 BUCKET NAMED WWW.YourRootDomainName
   RootBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: 'Retain'
     Properties:
       BucketName: !Ref RootDomainName
       AccessControl: PublicRead
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: error.html
+  # S3 BUCKET NAMED WWW.YourRootDomainName
   WWWBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: 'Retain'
     Properties:
       BucketName: !Sub
           - www.${Domain}
           - Domain: !Ref RootDomainName
       AccessControl: BucketOwnerFullControl
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
       WebsiteConfiguration:
         RedirectAllRequestsTo:
           HostName: !Ref RootBucket
+
+  # LOGGING S3 BUCKET
+  LoggingBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: 'Retain'
+    Properties:
+      BucketName: !Join 
+        - ''
+        - - logs-for-
+          - !Ref RootDomainName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+  # S3 BUCKET POLICY ATTACHED TO the S3 BUCKET NAMED YourRootDomainName
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -39,6 +64,7 @@ Resources:
                 - !Ref RootBucket
                 - /*
       Bucket: !Ref RootBucket
+
 Outputs:
   WebsiteURL:
     Value: !GetAtt RootBucket.WebsiteURL
