@@ -36,9 +36,7 @@ Resources:
         - DomainName: !Ref MyDomainName
           ValidationDomain: !Ref MyDomainName
       ValidationMethod: DNS
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 66284f51-abeb-4267-a930-fc99bcfc2101
+    
         
   #CLOUDFRONT DISTRIBUTION
   myDistribution:
@@ -49,7 +47,9 @@ Resources:
           - DomainName: !Join 
               - ''
               - - !Ref MyDomainName
-                - .s3.amazonaws.com
+                - .s3-website-
+                - !Ref "AWS::Region"
+                - .amazonaws.com
             Id: !Join 
               - ''
               - - S3-
