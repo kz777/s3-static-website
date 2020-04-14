@@ -4,6 +4,10 @@ Parameters:
     Type: String
     Description: Root Domain name of your website (example.com) | without WWW
     Default: example.com
+  HostS3Region:
+    Type: String
+    Description: Region of your HOST S3 BUCKET
+    Default: us-east-1
   Rt53HostedZoneID:
     Type: String
     Description: Hosted Zone ID - You can find it in the Hosted Zone Details section in R53
@@ -48,14 +52,19 @@ Resources:
               - ''
               - - !Ref MyDomainName
                 - .s3-website-
-                - !Ref "AWS::Region"
+                - !Ref HostS3Region
                 - .amazonaws.com
             Id: !Join 
               - ''
               - - S3-
                 - !Ref MyDomainName
-            S3OriginConfig:
-              OriginAccessIdentity: ''
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+            ## In case you want to restrict the bucket access use S3OriginConfig and remove CustomOriginConfig
+            # S3OriginConfig:
+            #   OriginAccessIdentity: ''
         Enabled: 'true'
         Comment: Some comment
         DefaultRootObject: index.html
