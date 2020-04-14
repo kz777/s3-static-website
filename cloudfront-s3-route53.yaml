@@ -61,7 +61,7 @@ Resources:
             CustomOriginConfig:
               HTTPPort: 80
               HTTPSPort: 443
-              OriginProtocolPolicy: https-only
+              OriginProtocolPolicy: http-only
             ## In case you want to restrict the bucket access use S3OriginConfig and remove CustomOriginConfig
             # S3OriginConfig:
             #   OriginAccessIdentity: ''
